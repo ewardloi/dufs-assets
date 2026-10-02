@@ -146,10 +146,6 @@ let $loginBtn;
 /**
  * @type Element
  */
-let $logoutBtn;
-/**
- * @type Element
- */
 let $userName;
 
 const beforeUnloadHandler = (event) => {
@@ -183,7 +179,6 @@ async function ready() {
   $emptyFolder = document.querySelector(".empty-folder");
   $editor = document.querySelector(".editor");
   $loginBtn = document.querySelector(".login-btn");
-  $logoutBtn = document.querySelector(".logout-btn");
   $userName = document.querySelector(".user-name");
 
   setupUpButton();
@@ -760,8 +755,6 @@ function setupDropzone() {
 
 async function setupAuth() {
   if (DATA.user) {
-    $logoutBtn.classList.remove("hidden");
-    $logoutBtn.addEventListener("click", logout);
     $userName.textContent = DATA.user;
   } else {
     $loginBtn.classList.remove("hidden");
@@ -1043,24 +1036,7 @@ async function checkAuth(variant) {
   });
   await assertResOK(res);
   $loginBtn.classList.add("hidden");
-  $logoutBtn.classList.remove("hidden");
   $userName.textContent = await res.text();
-}
-
-function logout() {
-  if (!DATA.auth) return;
-  const url = baseUrl();
-  const headers = DATA.user
-    ? { Authorization: `Basic ${btoa(`${DATA.user}:`)}` }
-    : undefined;
-
-  fetch(url, {
-    method: "LOGOUT",
-    headers,
-  })
-    .finally(() => {
-      location.href = url;
-    });
 }
 
 /**
