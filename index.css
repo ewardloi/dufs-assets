@@ -156,8 +156,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   padding: 0;
   border: 1px solid var(--border-primary);
   border-radius: 10px;
@@ -366,7 +366,7 @@ textarea {
   justify-content: flex-end;
 }
 
-.toolbox-actions-right {
+.toolbox-actions {
   display: flex;
   align-items: center;
   gap: 0.25rem;

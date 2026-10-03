@@ -143,10 +143,6 @@ let $editor;
  * @type Element
  */
 let $loginBtn;
-/**
- * @type Element
- */
-let $userName;
 
 const beforeUnloadHandler = (event) => {
   if (Uploader.queues.length > 0 || Uploader.runnings > 0) {
@@ -179,7 +175,6 @@ async function ready() {
   $emptyFolder = document.querySelector(".empty-folder");
   $editor = document.querySelector(".editor");
   $loginBtn = document.querySelector(".login-btn");
-  $userName = document.querySelector(".user-name");
 
   setupUpButton();
 
@@ -755,16 +750,16 @@ function setupDropzone() {
 
 async function setupAuth() {
   if (DATA.user) {
-    $userName.textContent = DATA.user;
-  } else {
-    $loginBtn.classList.remove("hidden");
-    $loginBtn.addEventListener("click", async () => {
-      try {
-        await checkAuth("login");
-      } catch { }
-      location.reload();
-    });
+    return;
   }
+
+  $loginBtn.classList.remove("hidden");
+  $loginBtn.addEventListener("click", async () => {
+    try {
+      await checkAuth("login");
+    } catch { }
+    location.reload();
+  });
 }
 
 function setupDownloadWithToken() {
@@ -1036,7 +1031,6 @@ async function checkAuth(variant) {
   });
   await assertResOK(res);
   $loginBtn.classList.add("hidden");
-  $userName.textContent = await res.text();
 }
 
 /**
