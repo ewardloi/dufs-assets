@@ -28,6 +28,7 @@ html {
   color: var(--text-primary);
   background: var(--bg-page);
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html[data-theme="dark"] {
@@ -184,7 +185,7 @@ textarea {
   min-width: 11rem;
   padding: 0.35rem;
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg-panel-strong);
   box-shadow: var(--shadow-panel);
 }
@@ -428,7 +429,7 @@ textarea {
 .empty-folder {
   padding: 1.5rem;
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg-panel);
   color: var(--text-secondary);
   box-shadow: var(--shadow-panel);
@@ -442,7 +443,7 @@ textarea {
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   background: var(--bg-panel);
   box-shadow: var(--shadow-panel);
@@ -675,7 +676,7 @@ textarea {
   width: 100%;
   min-height: calc(100vh - 12rem);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg-panel-strong);
   color: var(--text-primary);
   box-shadow: var(--shadow-panel);
@@ -702,7 +703,7 @@ textarea {
   width: 100%;
   min-height: calc(100vh - 11rem);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg-panel-strong);
   box-shadow: var(--shadow-panel);
 }
@@ -850,7 +851,7 @@ textarea {
     min-width: 10.5rem;
     padding: 0.35rem;
     border: 1px solid var(--border-primary);
-    border-radius: 12px;
+    border-radius: 14px;
     background: var(--bg-panel-strong);
     box-shadow: var(--shadow-panel);
   }
