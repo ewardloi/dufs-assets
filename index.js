@@ -47,6 +47,12 @@ function setupThemeSwitcher() {
   const applyTheme = () => {
     const isDark = mode === "dark" || (mode === "auto" && media.matches);
     document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    document.documentElement.dataset.themeMode = mode;
+    document.querySelectorAll("[data-theme-cycle]").forEach(button => {
+      const label = `Theme: ${mode}`;
+      button.setAttribute("aria-label", label);
+      button.title = label;
+    });
     document.querySelectorAll("[data-theme-toggle]").forEach(button => {
       const active = button.dataset.themeToggle === mode;
       button.classList.toggle("active", active);
@@ -65,6 +71,18 @@ function setupThemeSwitcher() {
   document.querySelectorAll("[data-theme-toggle]").forEach(button => {
     button.addEventListener("click", () => {
       mode = button.dataset.themeToggle;
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, mode);
+      } catch { }
+      applyTheme();
+    });
+  });
+
+  // compact switch for phones: one button that cycles auto -> light -> dark
+  const modes = ["auto", "light", "dark"];
+  document.querySelectorAll("[data-theme-cycle]").forEach(button => {
+    button.addEventListener("click", () => {
+      mode = modes[(modes.indexOf(mode) + 1) % modes.length];
       try {
         localStorage.setItem(THEME_STORAGE_KEY, mode);
       } catch { }
@@ -181,6 +199,7 @@ async function ready() {
   window.addEventListener('beforeunload', beforeUnloadHandler);
 
   addBreadcrumb(DATA.href, DATA.uri_prefix);
+  setupToolboxMobileMenu();
 
   if (DATA.kind === "Index") {
     document.title = `Index of ${DATA.href} - Dufs`;
@@ -422,13 +441,15 @@ async function setupIndexPage() {
   renderPathsTableHead();
   renderPathsTableBody();
   setupPathActionHandlers();
+  if (DATA.allow_delete && DATA.allow_upload) {
+    setupMoveDragDrop();
+  }
   setupCellActionsMenus();
 
   if (DATA.user) {
     setupDownloadWithToken();
   }
 
-  setupToolboxMobileMenu();
 }
 
 /**
@@ -505,6 +526,7 @@ function addPath(file, index) {
   let actionMove = "";
   let actionEdit = "";
   let actionView = "";
+  let canMove = false;
   let isDir = file.path_type.endsWith("Dir");
   if (isDir) {
     url += "/";
@@ -522,6 +544,7 @@ function addPath(file, index) {
   }
   if (DATA.allow_delete) {
     if (DATA.allow_upload) {
+      canMove = true;
       actionMove = `<div class="action-btn" data-path-action="move" data-index="${index}" title="Move & Rename">${ICONS.move}<span class="action-label">Move</span></div>`;
       if (!isDir) {
         actionEdit = `<a class="action-btn" title="Edit file" target="_blank" href="${url}?edit">${ICONS.edit}<span class="action-label">Edit</span></a>`;
@@ -555,7 +578,7 @@ function addPath(file, index) {
   let sizeDisplay = isDir ? formatDirSize(file.size) : formatFileSize(file.size).join(" ");
 
   $pathsTableBody.insertAdjacentHTML("beforeend", `
-<tr id="addPath${index}">
+<tr id="addPath${index}"${canMove ? ` draggable="true" data-move-index="${index}"` : ""}>
   <td class="path cell-name">
     <span class="path-content">
       ${getPathSvg(file.path_type)}
@@ -590,48 +613,53 @@ function setupPathActionHandlers() {
   document.body.dataset.pathActionHandlersBound = "true";
 }
 
+/**
+ * Header behaviour. The layout itself (grid areas per breakpoint) lives in index.css.
+ * On narrow screens the toolbox buttons move into the hamburger menu,
+ * and back again on wider screens.
+ *
+ * Keep this value in sync with the `@media (max-width: 680px)` header rules in index.css.
+ */
+const HEADER_MOBILE_QUERY = "(max-width: 680px)";
+
 function setupToolboxMobileMenu() {
   const $toolbox = document.querySelector(".toolbox");
   const $toolboxMobile = document.querySelector(".toolbox-mobile");
-  const $toolboxMobileMenu = document.querySelector(".toolbox-mobile-menu");
-  const $toolboxTrigger = document.querySelector(".toolbox-mobile-trigger");
+  const $menu = document.querySelector(".toolbox-mobile-menu");
+  const $trigger = document.querySelector(".toolbox-mobile-trigger");
+  if (!$toolbox || !$toolboxMobile || !$menu || !$trigger) return;
 
-  if (!$toolbox || !$toolboxMobile || !$toolboxMobileMenu || !$toolboxTrigger) return;
-
-  const moveControlsToMenu = () => {
-    const controls = Array.from($toolbox.children);
-    controls.forEach(control => {
-      if (!control || control.parentElement !== $toolbox) return;
-      $toolboxMobileMenu.appendChild(control);
-    });
-  };
-
-  const moveControlsToToolbox = () => {
-    const controls = Array.from($toolboxMobileMenu.children);
-    controls.forEach(control => {
-      if (!control || control.parentElement !== $toolboxMobileMenu) return;
-      $toolbox.appendChild(control);
-    });
-  };
-
-  const syncToolboxLayout = () => {
-    if (window.innerWidth <= 680) {
-      if ($toolboxMobile.classList.contains("hidden")) {
-        $toolboxMobile.classList.remove("hidden");
-      }
-      moveControlsToMenu();
-    } else {
-      $toolboxMobile.classList.add("hidden");
-      moveControlsToToolbox();
+  // Keyboard access: most header controls are <div>s.
+  document.querySelectorAll(".toolbox div.control, .login-btn, .save-btn").forEach($el => {
+    $el.setAttribute("role", "button");
+    $el.tabIndex = 0;
+    if (!$el.getAttribute("aria-label") && $el.title) {
+      $el.setAttribute("aria-label", $el.title);
     }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const $el = e.target;
+    if (!$el.matches || !$el.matches('div[role="button"]')) return;
+    e.preventDefault();
+    if ($el.classList.contains("upload-file")) {
+      document.getElementById("file")?.click();
+    } else {
+      $el.click();
+    }
+  });
+
+  const media = window.matchMedia(HEADER_MOBILE_QUERY);
+
+  const isOpen = () => $menu.classList.contains("is-open");
+
+  const setOpen = (open, restoreFocus = false) => {
+    $menu.classList.toggle("is-open", open);
+    $trigger.setAttribute("aria-expanded", String(open));
+    if (!open && restoreFocus) $trigger.focus();
   };
 
-  syncToolboxLayout();
-
-  $toolboxTrigger.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const closeRowMenus = () => {
     document.querySelectorAll(".cell-actions-menu").forEach(menu => {
       menu.classList.remove("is-open");
       menu.classList.remove("menu-up");
@@ -639,24 +667,53 @@ function setupToolboxMobileMenu() {
     document.querySelectorAll(".cell-actions-toggle").forEach(toggle => {
       toggle.setAttribute("aria-expanded", "false");
     });
+  };
 
-    const shouldOpen = !$toolboxMobileMenu.classList.contains("is-open");
+  // Move controls between the toolbox and the overflow menu depending on the breakpoint.
+  const layout = () => {
+    if (media.matches) {
+      Array.from($toolbox.children).forEach(control => $menu.appendChild(control));
+    } else {
+      setOpen(false);
+      Array.from($menu.children).forEach(control => $toolbox.appendChild(control));
+    }
+    // keep the current folder visible in the (scrollable) mobile breadcrumb
+    const $breadcrumb = document.querySelector(".breadcrumb");
+    if ($breadcrumb) $breadcrumb.scrollLeft = $breadcrumb.scrollWidth;
+  };
 
-    document.querySelectorAll(".toolbox-mobile-menu").forEach(menu => {
-      menu.classList.toggle("is-open", menu === $toolboxMobileMenu && shouldOpen);
-    });
+  $trigger.setAttribute("aria-haspopup", "true");
+  $trigger.setAttribute("aria-expanded", "false");
 
-    $toolboxTrigger.setAttribute("aria-expanded", String(shouldOpen));
+  $trigger.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeRowMenus();
+    setOpen(!isOpen());
   });
 
+  // Picking an action closes the menu.
+  $menu.addEventListener("click", event => {
+    if (event.target.closest(".control:not(.upload-file)")) setOpen(false);
+  });
+  $menu.addEventListener("change", () => setOpen(false));
+
   document.addEventListener("click", event => {
-    if (!event.target.closest(".toolbox-mobile")) {
-      $toolboxMobileMenu.classList.remove("is-open");
-      $toolboxTrigger.setAttribute("aria-expanded", "false");
+    if (!event.target.closest(".toolbox-mobile")) setOpen(false);
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && isOpen()) {
+      setOpen(false, true);
     }
   });
 
-  window.addEventListener("resize", syncToolboxLayout);
+  if (media.addEventListener) {
+    media.addEventListener("change", layout);
+  } else {
+    media.addListener(layout);
+  }
+  layout();
 }
 
 function setupCellActionsMenus() {
@@ -725,13 +782,19 @@ function setupCellActionsMenus() {
 }
 
 function setupDropzone() {
-  ["drag", "dragstart", "dragend", "dragover", "dragenter", "dragleave", "drop"].forEach(name => {
+  // Note: "dragstart" must not be cancelled here, otherwise rows can never be dragged (move).
+  ["drag", "dragend", "dragover", "dragenter", "dragleave", "drop"].forEach(name => {
     document.addEventListener(name, e => {
+      // Internal row drags (move) are handled by setupMoveDragDrop.
+      if (Array.from(e.dataTransfer?.types || []).includes(DND_MOVE_TYPE)) return;
       e.preventDefault();
       e.stopPropagation();
     });
   });
   document.addEventListener("drop", async e => {
+    // Internal row drags (move) are handled by setupMoveDragDrop, not uploaded.
+    if (Array.from(e.dataTransfer.types || []).includes(DND_MOVE_TYPE)) return;
+    if (!e.dataTransfer.items || !e.dataTransfer.items[0]) return;
     if (!e.dataTransfer.items[0].webkitGetAsEntry) {
       const files = Array.from(e.dataTransfer.files).filter(v => v.size > 0);
       for (const file of files) {
@@ -931,15 +994,21 @@ async function setupEditorPage() {
 async function deletePath(index) {
   const file = DATA.paths[index];
   if (!file) return;
-  await doDeletePath(file.name, newUrl(file.name), () => {
-    document.getElementById(`addPath${index}`)?.remove();
-    DATA.paths[index] = null;
-    if (!DATA.paths.find(v => !!v)) {
-      $pathsTable.classList.add("hidden");
-      $emptyFolder.textContent = DIR_EMPTY_NOTE;
-      $emptyFolder.classList.remove("hidden");
-    }
-  });
+  await doDeletePath(file.name, newUrl(file.name), () => removePathRow(index));
+}
+
+/**
+ * Remove a row from the table after it was deleted or moved away
+ * @param {number} index
+ */
+function removePathRow(index) {
+  document.getElementById(`addPath${index}`)?.remove();
+  DATA.paths[index] = null;
+  if (!DATA.paths.find(v => !!v)) {
+    $pathsTable.classList.add("hidden");
+    $emptyFolder.textContent = DIR_EMPTY_NOTE;
+    $emptyFolder.classList.remove("hidden");
+  }
 }
 
 async function doDeletePath(name, url, cb) {
@@ -957,7 +1026,7 @@ async function doDeletePath(name, url, cb) {
 }
 
 /**
- * Move path
+ * Move path (opens the folder picker)
  * @param {number} index
  * @returns
  */
@@ -965,21 +1034,36 @@ async function movePath(index) {
   const file = DATA.paths[index];
   if (!file) return;
   const fileUrl = newUrl(file.name);
-  const newFileUrl = await doMovePath(fileUrl);
+  const newFileUrl = await doMovePath(fileUrl, file.path_type.endsWith("Dir"));
   if (newFileUrl) {
-    location.href = newFileUrl.split("/").slice(0, -1).join("/");
+    afterMove(index, urlToPath(newFileUrl));
   }
 }
 
-async function doMovePath(fileUrl) {
-  const fileUrlObj = new URL(fileUrl);
-
-  const prefix = DATA.uri_prefix.slice(0, -1);
-
-  const filePath = decodeURIComponent(fileUrlObj.pathname.slice(prefix.length));
-
-  let newPath = prompt("Enter new path", filePath);
+/**
+ * Ask where to move a path (folder picker), then move it.
+ * @param {string} fileUrl
+ * @param {boolean} [isDir]
+ * @returns {Promise<string|undefined>} the new url, if the path was moved
+ */
+async function doMovePath(fileUrl, isDir = false) {
+  const filePath = urlToPath(fileUrl);
+  const newPath = await pickMoveDestination(filePath, isDir);
   if (!newPath) return;
+  return await moveTo(fileUrl, newPath);
+}
+
+/**
+ * Move `fileUrl` to `newPath` with a WebDAV MOVE request.
+ * @param {string} fileUrl
+ * @param {string} newPath
+ * @returns {Promise<string|undefined>} the new url, if the path was moved
+ */
+async function moveTo(fileUrl, newPath) {
+  const fileUrlObj = new URL(fileUrl);
+  const prefix = DATA.uri_prefix.slice(0, -1);
+  const filePath = urlToPath(fileUrl);
+
   if (!newPath.startsWith("/")) newPath = "/" + newPath;
   if (filePath === newPath) return;
   const newFileUrl = fileUrlObj.origin + prefix + newPath.split("/").map(encodeURIComponent).join("/");
@@ -1007,6 +1091,501 @@ async function doMovePath(fileUrl) {
   }
 }
 
+/**
+ * Update the page after the row `index` was moved to `newPath`.
+ * @param {number} index
+ * @param {string} newPath
+ */
+function afterMove(index, newPath) {
+  const destDir = parentDir(newPath);
+  if (destDir === currentDir() && !PARAMS.q) {
+    // renamed inside the current folder
+    location.reload();
+    return;
+  }
+  removePathRow(index);
+  showToast(`Moved to ${destDir}`, dirUrl(destDir));
+}
+
+/* ---------- path helpers ---------- */
+
+/**
+ * Convert an absolute url (or pathname) to a decoded path relative to uri_prefix
+ * @param {string} url
+ * @returns {string}
+ */
+function urlToPath(url) {
+  const prefix = DATA.uri_prefix.slice(0, -1);
+  const pathname = new URL(url, location.href).pathname;
+  return decodeURIComponent(pathname.slice(prefix.length));
+}
+
+/**
+ * Path of the folder shown on the current page ("/" for the root)
+ */
+function currentDir() {
+  return urlToPath(location.pathname).replace(/\/+$/, "") || "/";
+}
+
+function joinPath(dir, name) {
+  return dir === "/" ? "/" + name : dir + "/" + name;
+}
+
+function parentDir(path) {
+  const i = path.lastIndexOf("/");
+  return i <= 0 ? "/" : path.slice(0, i);
+}
+
+/**
+ * Url of a folder given as a decoded path
+ * @param {string} dir
+ */
+function dirUrl(dir) {
+  const prefix = DATA.uri_prefix.slice(0, -1);
+  const encoded = dir === "/" ? "/" : dir.split("/").map(encodeURIComponent).join("/") + "/";
+  return location.origin + prefix + encoded;
+}
+
+/* ---------- toast ---------- */
+
+let toastTimer = null;
+
+function showToast(text, href) {
+  document.querySelector(".toast")?.remove();
+  clearTimeout(toastTimer);
+  const $toast = document.createElement("div");
+  $toast.className = "toast";
+  $toast.setAttribute("role", "status");
+  const $text = document.createElement("span");
+  $text.textContent = text;
+  $toast.appendChild($text);
+  if (href) {
+    const $link = document.createElement("a");
+    $link.href = href;
+    $link.textContent = "Open";
+    $toast.appendChild($link);
+  }
+  document.body.appendChild($toast);
+  toastTimer = setTimeout(() => $toast.remove(), 6000);
+}
+
+/* ---------- drag & drop move ---------- */
+
+const DND_MOVE_TYPE = "application/x-dufs-move";
+
+/**
+ * Drag a row onto a folder row, a breadcrumb segment or the "Parent" button to move it.
+ */
+function setupMoveDragDrop() {
+  /** @type {number|null} */
+  let dragIndex = null;
+  /** @type {Element|null} */
+  let activeTarget = null;
+
+  const setActiveTarget = (node) => {
+    if (activeTarget === node) return;
+    activeTarget?.classList.remove("drop-target");
+    activeTarget = node;
+    activeTarget?.classList.add("drop-target");
+  };
+
+  const cleanup = () => {
+    setActiveTarget(null);
+    document.querySelectorAll("tr.dragging").forEach(row => row.classList.remove("dragging"));
+    dragIndex = null;
+  };
+
+  /**
+   * @returns {{node: Element, dir: string}|null}
+   */
+  const findTarget = (el) => {
+    if (!el || !el.closest || dragIndex === null) return null;
+
+    const row = el.closest("tr[data-move-index]");
+    if (row) {
+      const i = Number(row.dataset.moveIndex);
+      const file = DATA.paths[i];
+      if (i === dragIndex || !file || !file.path_type.endsWith("Dir")) return null;
+      return { node: row, dir: joinPath(currentDir(), file.name) };
+    }
+
+    const link = el.closest(".breadcrumb a, .up-button");
+    if (link && !link.classList.contains("hidden") && link.getAttribute("href")) {
+      const dir = urlToPath(link.getAttribute("href")).replace(/\/+$/, "") || "/";
+      return { node: link, dir };
+    }
+    return null;
+  };
+
+  document.addEventListener("dragstart", e => {
+    const row = e.target.closest && e.target.closest("tr[data-move-index]");
+    if (!row) return;
+    dragIndex = Number(row.dataset.moveIndex);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData(DND_MOVE_TYPE, String(dragIndex));
+    if (e.dataTransfer.setDragImage) {
+      e.dataTransfer.setDragImage(row, 16, 16);
+    }
+    row.classList.add("dragging");
+  });
+
+  document.addEventListener("dragover", e => {
+    if (dragIndex === null) return;
+    const target = findTarget(e.target);
+    setActiveTarget(target ? target.node : null);
+    e.dataTransfer.dropEffect = target ? "move" : "none";
+    if (target) e.preventDefault();
+  });
+
+  document.addEventListener("drop", async e => {
+    if (dragIndex === null) return;
+    const index = dragIndex;
+    const target = findTarget(e.target);
+    cleanup();
+    e.preventDefault();
+    if (!target) return;
+    await moveIndexInto(index, target.dir);
+  });
+
+  document.addEventListener("dragend", cleanup);
+
+  /* ----- touch: long-press a row, then drag it ----- */
+  // Touch browsers don't fire HTML5 drag events reliably, so drag is emulated here.
+
+  const LONG_PRESS_MS = 350;
+  const MOVE_TOLERANCE = 10;
+  const EDGE_SCROLL_ZONE = 70;
+
+  /** @type {HTMLElement|null} */
+  let touchRow = null;
+  let touchTimer = null;
+  let touchActive = false;
+  let touchStart = { x: 0, y: 0 };
+  let touchLast = { x: 0, y: 0 };
+  /** @type {HTMLElement|null} */
+  let ghost = null;
+  let scrollTimer = null;
+
+  const positionGhost = () => {
+    if (ghost) ghost.style.transform = `translate(${touchLast.x + 14}px, ${touchLast.y - 24}px)`;
+  };
+
+  const cancelTouch = () => {
+    clearTimeout(touchTimer);
+    clearInterval(scrollTimer);
+    touchTimer = null;
+    scrollTimer = null;
+    if (touchRow) touchRow.draggable = true;
+    ghost?.remove();
+    ghost = null;
+    document.body.classList.remove("touch-dragging");
+    touchActive = false;
+    touchRow = null;
+    cleanup();
+  };
+
+  const startTouchDrag = () => {
+    touchTimer = null;
+    if (!touchRow) return;
+    touchActive = true;
+    dragIndex = Number(touchRow.dataset.moveIndex);
+    touchRow.classList.add("dragging");
+    document.body.classList.add("touch-dragging");
+    const file = DATA.paths[dragIndex];
+    ghost = document.createElement("div");
+    ghost.className = "drag-ghost";
+    ghost.textContent = file ? file.name.split("/").pop() : "";
+    document.body.appendChild(ghost);
+    positionGhost();
+    if (navigator.vibrate) navigator.vibrate(15);
+    scrollTimer = setInterval(() => {
+      if (touchLast.y < EDGE_SCROLL_ZONE) {
+        window.scrollBy(0, -14);
+      } else if (touchLast.y > window.innerHeight - EDGE_SCROLL_ZONE) {
+        window.scrollBy(0, 14);
+      }
+    }, 16);
+  };
+
+  document.addEventListener("touchstart", e => {
+    if (touchRow) {
+      // a second finger cancels the gesture
+      cancelTouch();
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const row = e.target.closest && e.target.closest("tr[data-move-index]");
+    if (!row || e.target.closest(".cell-actions")) return;
+    touchRow = row;
+    // turn off native drag for this touch so it can't compete with the emulation
+    row.draggable = false;
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+    touchLast = { x: t.clientX, y: t.clientY };
+    touchTimer = setTimeout(startTouchDrag, LONG_PRESS_MS);
+  }, { passive: true });
+
+  document.addEventListener("touchmove", e => {
+    if (!touchRow) return;
+    const t = e.touches[0];
+    touchLast = { x: t.clientX, y: t.clientY };
+    if (!touchActive) {
+      // finger moved before the long-press fired: the user is scrolling
+      if (Math.hypot(t.clientX - touchStart.x, t.clientY - touchStart.y) > MOVE_TOLERANCE) {
+        cancelTouch();
+      }
+      return;
+    }
+    e.preventDefault();
+    positionGhost();
+    const target = findTarget(document.elementFromPoint(t.clientX, t.clientY));
+    setActiveTarget(target ? target.node : null);
+  }, { passive: false });
+
+  document.addEventListener("touchend", async e => {
+    if (!touchRow) return;
+    if (!touchActive) {
+      cancelTouch();
+      return;
+    }
+    const index = dragIndex;
+    const t = e.changedTouches[0];
+    const target = findTarget(document.elementFromPoint(t.clientX, t.clientY));
+    // don't let the browser turn the release into a click on the link under the finger
+    e.preventDefault();
+    cancelTouch();
+    if (index !== null && target) {
+      await moveIndexInto(index, target.dir);
+    }
+  });
+
+  document.addEventListener("touchcancel", () => {
+    if (touchRow) cancelTouch();
+  });
+
+  document.addEventListener("contextmenu", e => {
+    if (touchRow) e.preventDefault();
+  });
+}
+
+/**
+ * Move row `index` into folder `targetDir` (keeps the name)
+ * @param {number} index
+ * @param {string} targetDir
+ */
+async function moveIndexInto(index, targetDir) {
+  const file = DATA.paths[index];
+  if (!file) return;
+  const name = file.name.split("/").pop();
+  const srcPath = joinPath(currentDir(), file.name);
+  const destPath = joinPath(targetDir, name);
+  if (destPath === srcPath) return;
+  if (file.path_type.endsWith("Dir") && (targetDir === srcPath || targetDir.startsWith(srcPath + "/"))) {
+    alert(`Cannot move \`${srcPath}\` into itself`);
+    return;
+  }
+  const newFileUrl = await moveTo(newUrl(file.name), destPath);
+  if (newFileUrl) {
+    afterMove(index, destPath);
+  }
+}
+
+/* ---------- folder picker ---------- */
+
+/**
+ * Show a dialog to choose the destination folder (and optionally a new name).
+ * @param {string} filePath current path of the item, e.g. "/a/b.txt"
+ * @param {boolean} isDir whether the item is a folder
+ * @returns {Promise<string|undefined>} the new full path, or undefined if cancelled
+ */
+function pickMoveDestination(filePath, isDir) {
+  return new Promise(resolve => {
+    const origName = filePath.split("/").pop();
+    const origDir = parentDir(filePath);
+    const previousFocus = document.activeElement;
+    let curDir = origDir;
+    let dirs = [];
+    let loadId = 0;
+    let finished = false;
+
+    const el = (tag, cls, text) => {
+      const node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (text != null) node.textContent = text;
+      return node;
+    };
+    const button = (cls, text) => {
+      const node = el("button", cls, text);
+      node.type = "button";
+      return node;
+    };
+
+    const $backdrop = el("div", "dlg-backdrop");
+    const $dlg = el("div", "dlg");
+    $dlg.setAttribute("role", "dialog");
+    $dlg.setAttribute("aria-modal", "true");
+    $dlg.setAttribute("aria-label", "Move & Rename");
+
+    const $head = el("div", "dlg-head");
+    const $title = el("div", "dlg-title", `Move \`${origName}\``);
+    const $close = button("dlg-close", "×");
+    $close.setAttribute("aria-label", "Close");
+    $head.append($title, $close);
+
+    const $crumbs = el("div", "dlg-crumbs");
+    const $list = el("div", "dlg-list");
+
+    const $foot = el("div", "dlg-foot");
+    const $nameLabel = el("label", "dlg-name");
+    const $nameText = el("span", "", "Name");
+    const $name = el("input");
+    $name.type = "text";
+    $name.value = origName;
+    $name.autocomplete = "off";
+    $name.spellcheck = false;
+    $nameLabel.append($nameText, $name);
+    const $dest = el("div", "dlg-dest");
+    const $actions = el("div", "dlg-actions");
+    const $cancel = button("dlg-btn", "Cancel");
+    const $ok = button("dlg-btn dlg-primary", "Move here");
+    $actions.append($cancel, $ok);
+    $foot.append($nameLabel, $dest, $actions);
+
+    $dlg.append($head, $crumbs, $list, $foot);
+    $backdrop.appendChild($dlg);
+
+    const finish = (result) => {
+      if (finished) return;
+      finished = true;
+      document.removeEventListener("keydown", onKeydown, true);
+      $backdrop.remove();
+      if (previousFocus && previousFocus.focus) previousFocus.focus();
+      resolve(result);
+    };
+
+    const getDest = () => joinPath(curDir, $name.value.trim());
+
+    const isValid = () => {
+      const name = $name.value.trim();
+      if (!name || name.includes("/") || name === "." || name === "..") return false;
+      const dest = getDest();
+      if (dest === filePath) return false;
+      if (isDir && (dest === filePath || dest.startsWith(filePath + "/"))) return false;
+      return true;
+    };
+
+    const updateFoot = () => {
+      $dest.textContent = `→ ${getDest()}`;
+      $ok.textContent = curDir === origDir ? "Rename" : "Move here";
+      $ok.disabled = !isValid();
+    };
+
+    const renderCrumbs = () => {
+      $crumbs.replaceChildren();
+      const parts = curDir === "/" ? [] : curDir.split("/").slice(1);
+      const segments = [{ label: "Root", dir: "/" }];
+      let acc = "";
+      for (const part of parts) {
+        acc += "/" + part;
+        segments.push({ label: part, dir: acc });
+      }
+      segments.forEach((seg, i) => {
+        if (i > 0) $crumbs.appendChild(el("span", "dlg-sep", "/"));
+        if (i === segments.length - 1) {
+          $crumbs.appendChild(el("b", "", seg.label));
+        } else {
+          const $c = button("dlg-crumb", seg.label);
+          $c.addEventListener("click", () => loadDir(seg.dir));
+          $crumbs.appendChild($c);
+        }
+      });
+    };
+
+    const renderList = () => {
+      $list.replaceChildren();
+      if (curDir !== "/") {
+        const $up = button("dlg-item dlg-up");
+        $up.innerHTML = ICONS.dir;
+        $up.appendChild(el("span", "", ".."));
+        $up.addEventListener("click", () => loadDir(parentDir(curDir)));
+        $list.appendChild($up);
+      }
+      for (const name of dirs) {
+        const self = isDir && joinPath(curDir, name) === filePath;
+        const $item = button("dlg-item");
+        $item.innerHTML = ICONS.dir;
+        $item.appendChild(el("span", "", name));
+        if (self) {
+          $item.disabled = true;
+          $item.title = "Cannot move a folder into itself";
+        } else {
+          $item.addEventListener("click", () => loadDir(joinPath(curDir, name)));
+        }
+        $list.appendChild($item);
+      }
+      if (dirs.length === 0) {
+        $list.appendChild(el("div", "dlg-note", "No subfolders"));
+      }
+    };
+
+    const loadDir = async (dir) => {
+      const id = ++loadId;
+      curDir = dir;
+      dirs = [];
+      renderCrumbs();
+      updateFoot();
+      $list.replaceChildren(el("div", "dlg-note", "Loading…"));
+      try {
+        const res = await fetch(dirUrl(dir) + "?json");
+        await assertResOK(res);
+        const data = await res.json();
+        if (id !== loadId) return;
+        dirs = (data.paths || [])
+          .filter(p => p && p.path_type && p.path_type.endsWith("Dir"))
+          .map(p => p.name);
+        renderList();
+      } catch (err) {
+        if (id !== loadId) return;
+        $list.replaceChildren(el("div", "dlg-note dlg-error", `Cannot load folder: ${err.message}`));
+      }
+    };
+
+    const confirmMove = () => {
+      if (!isValid()) return;
+      finish(getDest());
+    };
+
+    function onKeydown(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        finish();
+      }
+    }
+
+    $close.addEventListener("click", () => finish());
+    $cancel.addEventListener("click", () => finish());
+    $backdrop.addEventListener("mousedown", e => {
+      if (e.target === $backdrop) finish();
+    });
+    $ok.addEventListener("click", confirmMove);
+    $name.addEventListener("input", updateFoot);
+    $name.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmMove();
+      }
+    });
+    document.addEventListener("keydown", onKeydown, true);
+
+    document.body.appendChild($backdrop);
+    // Focus the dialog itself (not the name field) so nothing is highlighted
+    // and the mobile keyboard doesn't pop up over the folder list.
+    $dlg.tabIndex = -1;
+    $dlg.focus({ preventScroll: true });
+    loadDir(curDir);
+  });
+}
 
 /**
  * Save editor change

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <noscript>
     <meta http-equiv="refresh" content="0; url=?noscript">
   </noscript>
@@ -14,9 +14,20 @@
 <body>
   <div class="app-shell">
     <header class="head">
-      <div class="breadcrumb-wrap">
-        <div class="breadcrumb"></div>
+      <div class="toolbox-mobile">
+        <button type="button" class="toolbox-mobile-trigger" aria-label="Menu" aria-expanded="false"
+          aria-controls="toolbox-menu" title="Menu">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+          </svg>
+        </button>
+        <div class="toolbox-mobile-menu" id="toolbox-menu"></div>
       </div>
+
+      <nav class="breadcrumb-wrap" aria-label="Breadcrumb">
+        <div class="breadcrumb"></div>
+      </nav>
 
       <div class="toolbox">
         <a href="" class="control download hidden" title="Download file" download="">
@@ -87,14 +98,14 @@
         </a>
       </div>
 
-      <form class="searchbar hidden">
+      <form class="searchbar hidden" role="search">
         <div class="icon">
           <svg width="16" height="16" viewBox="0 0 16 16">
             <path
               d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
           </svg>
         </div>
-        <input id="search" title="Searching for folders or files" name="q" type="text" maxlength="128"
+        <input id="search" title="Searching for folders or files" aria-label="Search" name="q" type="text" maxlength="128"
           autocomplete="off" tabindex="1">
         <input type="submit" hidden />
       </form>
@@ -106,16 +117,20 @@
             <button type="button" class="theme-btn" data-theme-toggle="light" aria-pressed="false">Light</button>
             <button type="button" class="theme-btn" data-theme-toggle="dark" aria-pressed="false">Dark</button>
           </div>
-          <div class="toolbox-mobile hidden">
-            <button type="button" class="toolbox-mobile-trigger" aria-label="Open toolbox actions" aria-expanded="false"
-              title="More actions">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M8 4.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm0 5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm0 5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
-              </svg>
-            </button>
-            <div class="toolbox-mobile-menu"></div>
-          </div>
+          <button type="button" class="control theme-cycle" data-theme-cycle aria-label="Theme: auto"
+            title="Theme: auto">
+            <svg class="icon-auto" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="5.5" />
+              <path class="theme-icon-fill" d="M8 2.5a5.5 5.5 0 0 1 0 11z" />
+            </svg>
+            <svg class="icon-light" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="3" />
+              <path d="M8 1.5V3M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" />
+            </svg>
+            <svg class="icon-dark" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M13.5 9.6A5.7 5.7 0 0 1 6.4 2.5a5.7 5.7 0 1 0 7.1 7.1z" />
+            </svg>
+          </button>
           <div class="login-btn hidden" title="Login">
             <svg width="16" height="16" viewBox="0 0 16 16">
               <path fill-rule="evenodd"
