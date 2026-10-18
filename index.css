@@ -598,7 +598,7 @@ textarea {
 }
 
 .cell-actions {
-  width: 180px;
+  width: 192px;
   text-align: right;
 }
 
@@ -967,14 +967,12 @@ body.touch-dragging {
   background: var(--button-active);
   background: color-mix(in srgb, var(--text-accent) 16%, transparent);
   text-decoration: none;
-  transform: scale(1.06);
 }
 
 .up-button.drop-target {
   border-color: transparent;
   background: var(--button-active);
   background: color-mix(in srgb, var(--text-accent) 16%, transparent);
-  transform: scale(1.08);
 }
 
 /* ---------- Move: folder picker dialog ---------- */

@@ -123,6 +123,7 @@ const ICONS = {
   file: `<svg height="16" viewBox="0 0 12 16" width="12"><path fill-rule="evenodd" d="M6 5H2V4h4v1zM2 8h7V7H2v1zm0 2h7V9H2v1zm0 2h7v-1H2v1zm10-7.5V14c0 .55-.45 1-1 1H1c-.55 0-1-.45-1-1V2c0-.55.45-1 1-1h7.5L12 4.5zM11 5L8 2H1v12h10V5z"></path></svg>`,
   download: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>`,
   move: `<svg width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.5 1.5A.5.5 0 0 0 1 2v4.8a2.5 2.5 0 0 0 2.5 2.5h9.793l-3.347 3.346a.5.5 0 0 0 .708.708l4.2-4.2a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 8.3H3.5A1.5 1.5 0 0 1 2 6.8V2a.5.5 0 0 0-.5-.5z"/></svg>`,
+  copy: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/></svg>`,
   edit: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>`,
   delete: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M6.854 7.146a.5.5 0 1 0-.708.708L7.293 9l-1.147 1.146a.5.5 0 0 0 .708.708L8 9.707l1.146 1.147a.5.5 0 0 0 .708-.708L8.707 9l1.147-1.146a.5.5 0 0 0-.708-.708L8 8.293 6.854 7.146z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>`,
   view: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg>`,
@@ -524,6 +525,7 @@ function addPath(file, index) {
   let actionDelete = "";
   let actionDownload = "";
   let actionMove = "";
+  let actionCopy = "";
   let actionEdit = "";
   let actionView = "";
   let canMove = false;
@@ -553,11 +555,14 @@ function addPath(file, index) {
     actionDelete = `
     <div class="action-btn" data-path-action="delete" data-index="${index}" title="Delete">${ICONS.delete}<span class="action-label">Delete</span></div>`;
   }
+  if (DATA.allow_upload) {
+    actionCopy = `<div class="action-btn" data-path-action="copy" data-index="${index}" title="Copy">${ICONS.copy}<span class="action-label">Copy</span></div>`;
+  }
   if (!actionEdit && !isDir) {
     actionView = `<a class="action-btn" title="View file" target="_blank" href="${url}?view">${ICONS.view}<span class="action-label">View</span></a>`;
   }
 
-  const actionItems = [actionDownload, actionView, actionMove, actionDelete, actionEdit].filter(Boolean);
+  const actionItems = [actionDownload, actionView, actionMove, actionCopy, actionDelete, actionEdit].filter(Boolean);
   const actionButtons = actionItems.join("");
 
   let actionCell = `
@@ -602,6 +607,11 @@ function setupPathActionHandlers() {
 
     if (pathAction === "move") {
       movePath(Number(index));
+      return;
+    }
+
+    if (pathAction === "copy") {
+      copyPath(Number(index));
       return;
     }
 
@@ -936,6 +946,15 @@ async function setupEditorPage() {
       }
     });
 
+    const $copyFile = document.querySelector(".copy-file");
+    $copyFile.classList.remove("hidden");
+    $copyFile.addEventListener("click", async () => {
+      const newFileUrl = await doCopyPath(url);
+      if (newFileUrl) {
+        showToast(`Copied to ${urlToPath(newFileUrl)}`, newFileUrl + "?edit");
+      }
+    });
+
     const $deleteFile = document.querySelector(".delete-file");
     $deleteFile.classList.remove("hidden");
     $deleteFile.addEventListener("click", async () => {
@@ -1041,6 +1060,33 @@ async function movePath(index) {
 }
 
 /**
+ * Copy path (opens the folder picker)
+ * @param {number} index
+ */
+async function copyPath(index) {
+  const file = DATA.paths[index];
+  if (!file) return;
+  const fileUrl = newUrl(file.name);
+  const newFileUrl = await doCopyPath(fileUrl, file.path_type.endsWith("Dir"));
+  if (newFileUrl) {
+    afterCopy(urlToPath(newFileUrl));
+  }
+}
+
+/**
+ * Ask where to copy a path (folder picker), then copy it.
+ * @param {string} fileUrl
+ * @param {boolean} [isDir]
+ * @returns {Promise<string|undefined>} the new url, if the path was copied
+ */
+async function doCopyPath(fileUrl, isDir = false) {
+  const filePath = urlToPath(fileUrl);
+  const newPath = await pickMoveDestination(filePath, isDir, true);
+  if (!newPath) return;
+  return await copyTo(fileUrl, newPath);
+}
+
+/**
  * Ask where to move a path (folder picker), then move it.
  * @param {string} fileUrl
  * @param {boolean} [isDir]
@@ -1060,6 +1106,27 @@ async function doMovePath(fileUrl, isDir = false) {
  * @returns {Promise<string|undefined>} the new url, if the path was moved
  */
 async function moveTo(fileUrl, newPath) {
+  return await transferTo(fileUrl, newPath, "MOVE");
+}
+
+/**
+ * Copy `fileUrl` to `newPath` with a WebDAV COPY request.
+ * @param {string} fileUrl
+ * @param {string} newPath
+ * @returns {Promise<string|undefined>} the new url, if the path was copied
+ */
+async function copyTo(fileUrl, newPath) {
+  return await transferTo(fileUrl, newPath, "COPY");
+}
+
+/**
+ * Move or copy `fileUrl` to `newPath` with a WebDAV MOVE / COPY request.
+ * @param {string} fileUrl
+ * @param {string} newPath
+ * @param {"MOVE"|"COPY"} method
+ * @returns {Promise<string|undefined>} the new url, if the request succeeded
+ */
+async function transferTo(fileUrl, newPath, method) {
   const fileUrlObj = new URL(fileUrl);
   const prefix = DATA.uri_prefix.slice(0, -1);
   const filePath = urlToPath(fileUrl);
@@ -1079,7 +1146,7 @@ async function moveTo(fileUrl, newPath) {
       }
     }
     const res2 = await fetch(fileUrl, {
-      method: "MOVE",
+      method,
       headers: {
         "Destination": newFileUrl,
       }
@@ -1087,7 +1154,7 @@ async function moveTo(fileUrl, newPath) {
     await assertResOK(res2);
     return newFileUrl;
   } catch (err) {
-    alert(`Cannot move \`${filePath}\` to \`${newPath}\`, ${err.message}`);
+    alert(`Cannot ${method.toLowerCase()} \`${filePath}\` to \`${newPath}\`, ${err.message}`);
   }
 }
 
@@ -1105,6 +1172,20 @@ function afterMove(index, newPath) {
   }
   removePathRow(index);
   showToast(`Moved to ${destDir}`, dirUrl(destDir));
+}
+
+/**
+ * Update the page after a path was copied to `newPath`.
+ * @param {string} newPath
+ */
+function afterCopy(newPath) {
+  const destDir = parentDir(newPath);
+  if (destDir === currentDir() && !PARAMS.q) {
+    // copied inside the current folder
+    location.reload();
+    return;
+  }
+  showToast(`Copied to ${destDir}`, dirUrl(destDir));
 }
 
 /* ---------- path helpers ---------- */
@@ -1396,9 +1477,10 @@ async function moveIndexInto(index, targetDir) {
  * Show a dialog to choose the destination folder (and optionally a new name).
  * @param {string} filePath current path of the item, e.g. "/a/b.txt"
  * @param {boolean} isDir whether the item is a folder
+ * @param {boolean} [copy] copy instead of move
  * @returns {Promise<string|undefined>} the new full path, or undefined if cancelled
  */
-function pickMoveDestination(filePath, isDir) {
+function pickMoveDestination(filePath, isDir, copy = false) {
   return new Promise(resolve => {
     const origName = filePath.split("/").pop();
     const origDir = parentDir(filePath);
@@ -1424,10 +1506,10 @@ function pickMoveDestination(filePath, isDir) {
     const $dlg = el("div", "dlg");
     $dlg.setAttribute("role", "dialog");
     $dlg.setAttribute("aria-modal", "true");
-    $dlg.setAttribute("aria-label", "Move & Rename");
+    $dlg.setAttribute("aria-label", copy ? "Copy" : "Move & Rename");
 
     const $head = el("div", "dlg-head");
-    const $title = el("div", "dlg-title", `Move \`${origName}\``);
+    const $title = el("div", "dlg-title", `${copy ? "Copy" : "Move"} \`${origName}\``);
     const $close = button("dlg-close", "×");
     $close.setAttribute("aria-label", "Close");
     $head.append($title, $close);
@@ -1447,7 +1529,7 @@ function pickMoveDestination(filePath, isDir) {
     const $dest = el("div", "dlg-dest");
     const $actions = el("div", "dlg-actions");
     const $cancel = button("dlg-btn", "Cancel");
-    const $ok = button("dlg-btn dlg-primary", "Move here");
+    const $ok = button("dlg-btn dlg-primary", copy ? "Copy here" : "Move here");
     $actions.append($cancel, $ok);
     $foot.append($nameLabel, $dest, $actions);
 
@@ -1476,7 +1558,7 @@ function pickMoveDestination(filePath, isDir) {
 
     const updateFoot = () => {
       $dest.textContent = `→ ${getDest()}`;
-      $ok.textContent = curDir === origDir ? "Rename" : "Move here";
+      $ok.textContent = copy ? "Copy here" : curDir === origDir ? "Rename" : "Move here";
       $ok.disabled = !isValid();
     };
 
@@ -1517,7 +1599,7 @@ function pickMoveDestination(filePath, isDir) {
         $item.appendChild(el("span", "", name));
         if (self) {
           $item.disabled = true;
-          $item.title = "Cannot move a folder into itself";
+          $item.title = `Cannot ${copy ? "copy" : "move"} a folder into itself`;
         } else {
           $item.addEventListener("click", () => loadDir(joinPath(curDir, name)));
         }
